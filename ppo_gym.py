@@ -213,6 +213,6 @@ for ep in range(total_iterations):
     if ep % 100 == 0:
         pcpu = policy_net.cpu()
         vcpu = value_net.cpu()
-        pickle.dump((pcpu, vcpu), open('learned_models/'+env_name+'_saved_networks.p', 'wb'))
+        pickle.dump((pcpu, vcpu), open('learned_models/'+ env_name+ min_batch_size + '_saved_networks.p', 'wb'))
         policy_net.cuda()
         value_net.cuda()
