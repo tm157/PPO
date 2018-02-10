@@ -24,7 +24,7 @@ else:
     torch.set_default_tensor_type('torch.DoubleTensor')
     PI = torch.DoubleTensor([3.1415926])
 
-env_name = 'Hopper-v1'
+env_name = 'Humanoid-v1'
 render = False
 log_std = 0
 gamma = 0.99
@@ -33,11 +33,9 @@ l2_reg = 1e-3
 learning_rate = 0.0003
 clip_epsilon = 0.2 # for PPO
 seed = 1
-min_batch_size = 2048
-# min_batch_size = 20000
-total_iterations = 10000
+min_batch_size = 10000
+total_iterations = 1000
 log_interval = 1
-save_model_interval = 0
 optim_epochs = 5
 optim_batch_size = 64
 
@@ -211,3 +209,10 @@ for ep in range(total_iterations):
 
     if ep % 10 == 0:
         print('Episode {}\treward_batch {}'.format(ep, reward_batch))
+
+    if ep % 100 == 0:
+        pcpu = policy_net.cpu()
+        vcpu = value_net.cpu()
+        pickle.dump((pcpu, vcpu), open('learned_models/'+env_name+'_saved_networks.p', 'wb'))
+        policy_net.cuda()
+        value_net.cuda()
