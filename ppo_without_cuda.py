@@ -7,6 +7,7 @@ import torch
 from torch.autograd import Variable
 import torch.nn as nn
 from replay_memory import Memory
+from running_state import ZFilter
 import math
 import numpy as np
 
@@ -27,7 +28,8 @@ render = False
 log_std = 0
 gamma = 0.99
 tau = 0.95
-l2_reg = 1e-3
+eps = 0.0001
+l2_reg = 0.001
 learning_rate = 0.0003
 clip_epsilon = 0.2 # for PPO
 seed = 1
@@ -43,6 +45,7 @@ optim_batch_size = 64
 env = gym.make(env_name)
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.shape[0]
+running_state = ZFilter((state_dim), clip = 5)
 
 policy_net = Policy(state_dim, action_dim)
 old_policy_net = Policy(state_dim, action_dim)
@@ -67,6 +70,11 @@ def normal_log_density(x, mean, log_std, std):
     log_density = -(x - mean).pow(2) / (2 * var) - 0.5 * torch.log(2 * Variable(PI)) - log_std
     return log_density.sum(1)
 
+# def kld(new_mean, new_std, old_mean, old_std):
+    # num = (new_mean - old_mean).pow(2) + new_std.pow(2) - old_std.pow(2)
+    # den = 2.*(old_std) + eps 
+    # return torch.sum(num / den + torch.log(q_std) - torch.log(p_std))
+
 
 def collect_samples(policy_net, min_batch_size):
     memory = Memory()
@@ -77,6 +85,7 @@ def collect_samples(policy_net, min_batch_size):
 
     while (num_steps < min_batch_size):
         state = env.reset()
+        state = running_state(state)
         reward_sum = 0
         for t in range(10000):
             action = select_action(policy_net, state)
@@ -176,6 +185,8 @@ def update_parameters(batch, new_lr, new_clip):
 
             action_means_old, action_log_stds_old, action_stds_old = old_policy_net(state_var)
             log_prob_old = normal_log_density(action_var, action_means_old, action_log_stds_old, action_stds_old)
+
+            # kld_loss = kld(action_means, action_stds, action_means_old, action_stds_old)
 
             # updating the critic...
             #updating the value function
