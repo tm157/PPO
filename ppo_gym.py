@@ -7,6 +7,7 @@ import torch
 from torch.autograd import Variable
 import torch.nn as nn
 from replay_memory import Memory
+from running_state import ZFilter
 import math
 import numpy as np
 
@@ -43,6 +44,7 @@ optim_batch_size = 64
 env = gym.make(env_name)
 state_dim = env.observation_space.shape[0]
 action_dim = env.action_space.shape[0]
+running_state = ZFilter((state_dim), clip = 5)
 
 policy_net = Policy(state_dim, action_dim)
 old_policy_net = Policy(state_dim, action_dim)
@@ -78,6 +80,7 @@ def collect_samples(policy_net, min_batch_size):
 
     while (num_steps < min_batch_size):
         state = env.reset()
+        state = running_state(state)
         reward_sum = 0
         for t in range(10000):
             action = select_action(policy_net, state)
@@ -213,6 +216,6 @@ for ep in range(total_iterations):
     if ep % 100 == 0:
         pcpu = policy_net.cpu()
         vcpu = value_net.cpu()
-        pickle.dump((pcpu, vcpu), open('learned_models/'+ env_name+ min_batch_size + '_saved_networks.p', 'wb'))
+        pickle.dump((pcpu, vcpu), open('learned_models/'+ env_name+ str(min_batch_size) + '_saved_networks.p', 'wb'))
         policy_net.cuda()
         value_net.cuda()
